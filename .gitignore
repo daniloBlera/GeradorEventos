@@ -87,3 +87,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# PyCharm project stuff
+.idea
+
+# Diretório dos arquivos de eventos
+.data
