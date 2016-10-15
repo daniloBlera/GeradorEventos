@@ -91,5 +91,6 @@ ENV/
 # PyCharm project stuff
 .idea
 
-# Diretório dos arquivos de eventos
-.data
+# Arquivos de dados
+.dat
+
