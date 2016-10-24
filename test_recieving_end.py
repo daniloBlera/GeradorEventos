@@ -5,13 +5,14 @@ import sys
 
 import pika
 
-conn_params = pika.ConnectionParameters(host='192.168.25.4')
+conn_params = pika.ConnectionParameters(host='192.168.25.7')
 connection = pika.BlockingConnection(parameters=conn_params)
 channel = connection.channel()
 
+exchange_name = 'amq.topic'  
+
 channel.exchange_declare(
-    exchange='psd_topic',
-    auto_delete=True,
+    exchange=exchange_name,
     durable=True,
     exchange_type='topic',
 )
@@ -20,16 +21,16 @@ result = channel.queue_declare(exclusive=True)
 queue_name = result.method.queue
 
 channel.queue_bind(
-    exchange='psd_topic', queue=queue_name, routing_key='friendships')
+    exchange=exchange_name, queue=queue_name, routing_key='friendships')
 
 channel.queue_bind(
-    exchange='psd_topic', queue=queue_name, routing_key='posts')
+    exchange=exchange_name, queue=queue_name, routing_key='posts')
 
 channel.queue_bind(
-    exchange='psd_topic', queue=queue_name, routing_key='comments')
+    exchange=exchange_name, queue=queue_name, routing_key='comments')
 
 channel.queue_bind(
-    exchange='psd_topic', queue=queue_name, routing_key='likes')
+    exchange=exchange_name, queue=queue_name, routing_key='likes')
 
 def callback(ch, method, properties, body):
     timestamp = body.split('|')[0]

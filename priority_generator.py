@@ -41,6 +41,7 @@ else:
     # time_speed_factor = 86400   # 1d/s
     time_speed_factor = 43200   # 0.5d/s
     ip_address = '172.16.206.18'
+    # ip_address = '192.168.25.7'
 
 # Configuração do serviço de filas
 credentials = pika.PlainCredentials(username='guest', password='guest')
@@ -55,6 +56,8 @@ message_queue = queue.PriorityQueue()
 
 channel.exchange_declare(
     exchange=exchange_name, type='topic', durable=True)
+
+topic = "events.{0}"
 
 try:
     with open(friendships_path, 'r') as friendships:
@@ -92,14 +95,15 @@ def get_datetime_from(string):
 
 def parse_file(file_path):
     filename = file_path.split(os.sep)[-1]
-    topic = filename.strip('.dat')
+    # topic = filename.strip('.dat')
+    event_topic = topic.format(filename.strip('.dat'))
 
     input_file = open(file_path, 'r')
     line_read = input_file.readline().strip('\n')
 
     while line_read != '':
         timestamp = line_read.split('+')[0]
-        message_queue.put_nowait((timestamp, topic, str(line_read)))
+        message_queue.put_nowait((timestamp, event_topic, str(line_read)))
         line_read = input_file.readline()
 
     input_file.close()
@@ -122,8 +126,8 @@ def send_to_queue_service():
         while not message_queue.empty():
             event = message_queue.get_nowait()
             timestamp = event[0]
-            topic = event[1]
-            message = event[2]
+            event_topic = event[1]
+            message = event[1] + '|' + event[2]
 
             event_time = get_datetime_from(timestamp)
             time_to_next = (event_time - simulated_time).total_seconds()
@@ -133,10 +137,10 @@ def send_to_queue_service():
                 break
 
             logger.debug(
-                "SENT: (Topic: %s, Timestamp: %s)", topic[:5], timestamp)
+                "SENT: (Topic: %s, Timestamp: %s)", event_topic[:5], timestamp)
 
             channel.basic_publish(
-                exchange=exchange_name, routing_key=topic, body=message)
+                exchange=exchange_name, routing_key=event_topic, body=message)
 
 
 if __name__ == "__main__":
