@@ -22,6 +22,7 @@ logger.addHandler(console_handler)
 
 # Diretório completo dos dados da aplicação
 data_path = "{1}{0}data{0}{2}"
+data_path = "{1}{0}data_testes{0}{2}"
 current_dir = os.getcwd()
 
 friendships_path = data_path.format(os.sep, current_dir, "friendships.dat")
@@ -40,15 +41,14 @@ if len(sys.argv) == 3:
 else:
     # time_speed_factor = 86400   # 1d/s
     time_speed_factor = 43200   # 0.5d/s
-    ip_address = '172.16.206.18'
-    # ip_address = '192.168.25.7'
+    # ip_address = '172.16.206.18'
+    ip_address = '192.168.25.7'
 
 # Configuração do serviço de filas
 credentials = pika.PlainCredentials(username='guest', password='guest')
 parameters = pika.ConnectionParameters(host=ip_address, port=5672)
 connection = pika.BlockingConnection(parameters)
 channel = connection.channel()
-# exchange_name = 'psd_topic'
 exchange_name = 'amq.topic'
 
 # Fila das mensagens de evento
@@ -56,8 +56,6 @@ message_queue = queue.PriorityQueue()
 
 channel.exchange_declare(
     exchange=exchange_name, type='topic', durable=True)
-
-topic = "events.{0}"
 
 try:
     with open(friendships_path, 'r') as friendships:
@@ -95,8 +93,8 @@ def get_datetime_from(string):
 
 def parse_file(file_path):
     filename = file_path.split(os.sep)[-1]
-    # topic = filename.strip('.dat')
-    event_topic = topic.format(filename.strip('.dat'))
+    event_topic = filename.strip('.dat')
+    # event_topic = topic.format(filename.strip('.dat'))
 
     input_file = open(file_path, 'r')
     line_read = input_file.readline().strip('\n')

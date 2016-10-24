@@ -92,6 +92,9 @@ ENV/
 .idea
 
 # Arquivos de dados
-*.dat
 *.zip
+*gz
+
+# Diretório contendo os dados a serem processados
+data/*.dat
 
