@@ -21,8 +21,9 @@ logger.setLevel(logging_level)
 logger.addHandler(console_handler)
 
 # Diretório completo dos dados da aplicação
-data_path = "{1}{0}data{0}{2}"
-data_path = "{1}{0}data_testes{0}{2}"
+# data_path = "{1}{0}data{0}{2}"
+data_path = "{1}{0}data_testes{0}{2}" # Arquivos de testes, contêm 10 linhas
+# data_path = "{1}{0}data_testes_one_liners{0}{2}" # Arquivos com uma só linha
 current_dir = os.getcwd()
 
 friendships_path = data_path.format(os.sep, current_dir, "friendships.dat")
@@ -86,15 +87,61 @@ except IOError as e:
     sys.stderr.write("ARQUIVO NÃO ENCONTRADO\n{}".format(str(e)))
     sys.exit(1)
 
+# Indicadores para os arquivos foram lidos até o fim
+friendships_is_closed = False
+comments_is_closed = False
+likes_is_closed = False
+posts_is_closed = False
+
 
 def get_datetime_from(string):
     return datetime.datetime.strptime(string, timestamp_format)
 
 
-def parse_file(file_path):
+def mark_as_closed(filename):
+    """
+    Marca o arquivo como completamente lido.
+
+    :param filename: Nome do arquivo a ser marcado como lido
+    :return: None
+    """
+    global friendships_is_closed
+    global comments_is_closed
+    global likes_is_closed
+    global posts_is_closed
+
+    if filename == 'friendships':
+        friendships_is_closed = True
+    elif filename == 'comments':
+        comments_is_closed = True
+    elif filename == 'likes':
+        likes_is_closed = True
+    elif filename == 'posts':
+        posts_is_closed = True
+
+
+def has_open_files():
+    """
+    Verifica se ainda existem arquivos abertos.
+
+    :return: True caso existam arquivos em aberto, False caso todos estejam
+    fechados.
+    """
+    return (friendships_is_closed or
+            comments_is_closed or
+            likes_is_closed or
+            posts_is_closed)
+
+
+def parse_events(file_path):
+    """
+    Lê o arquivo e insere as linhas na lista de eventos.
+
+    :param file_path: Diretório completo do arquivo.
+    :return: None
+    """
     filename = file_path.split(os.sep)[-1]
     event_topic = filename.strip('.dat')
-    # event_topic = topic.format(filename.strip('.dat'))
 
     input_file = open(file_path, 'r')
     line_read = input_file.readline().strip('\n')
@@ -104,10 +151,16 @@ def parse_file(file_path):
         message_queue.put_nowait((timestamp, event_topic, str(line_read)))
         line_read = input_file.readline()
 
+    mark_as_closed(filename)
     input_file.close()
 
 
 def send_to_queue_service():
+    """
+    Envia os eventos da fila de prioridades ao broker.
+
+    :return: None
+    """
     global last_iteration
     global simulated_time
 
@@ -131,7 +184,11 @@ def send_to_queue_service():
             time_to_next = (event_time - simulated_time).total_seconds()
 
             if time_to_next > 0:
-                logger.debug("NO EVENT")
+                message_queue.put_nowait(event)
+
+                logger.debug(
+                    "NO EVENT -- REMAINING EVENTS: %s", message_queue.qsize())
+
                 break
 
             logger.debug(
@@ -140,22 +197,26 @@ def send_to_queue_service():
             channel.basic_publish(
                 exchange=exchange_name, routing_key=event_topic, body=message)
 
+        if (not has_open_files()) and message_queue.empty():
+            break
+            # continue
+
 
 if __name__ == "__main__":
     logger.info("--INICIANDO LEITURA--")
 
     try:
         friendship_reader = thread.start_new_thread(
-            parse_file, (friendships_path,))
+            parse_events, (friendships_path,))
 
         post_reader = thread.start_new_thread(
-            parse_file, (posts_path, ))
+            parse_events, (posts_path,))
 
         comment = thread.start_new_thread(
-            parse_file, (comments_path, ))
+            parse_events, (comments_path,))
 
         like = thread.start_new_thread(
-            parse_file, (likes_path, ))
+            parse_events, (likes_path,))
 
         logger.info("Enviando mensagens...")
         send_to_queue_service()
