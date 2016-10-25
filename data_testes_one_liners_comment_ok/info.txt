@@ -1,0 +1,4 @@
+Os arquivos dos eventos contêm apenas uma linha cada. O evento 'Comentário'
+possui o 'commented_post_id' igual ao evento do arquivo de posts para testar o
+caso simples do comentário ser adicionado à lista de posts+comentários.
+

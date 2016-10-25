@@ -22,8 +22,10 @@ logger.addHandler(console_handler)
 
 # Diretório completo dos dados da aplicação
 # data_path = "{1}{0}data{0}{2}"
-data_path = "{1}{0}data_testes{0}{2}" # Arquivos de testes, contêm 10 linhas
+# data_path = "{1}{0}data_testes{0}{2}" # Arquivos de testes, contêm 10 linhas
 # data_path = "{1}{0}data_testes_one_liners{0}{2}" # Arquivos com uma só linha
+data_path = "{1}{0}data_testes_one_liners_comment_ok{0}{2}"  # comment id igual
+                                                             # ao do post
 current_dir = os.getcwd()
 
 friendships_path = data_path.format(os.sep, current_dir, "friendships.dat")
@@ -148,7 +150,7 @@ def parse_events(file_path):
 
     while line_read != '':
         timestamp = line_read.split('+')[0]
-        message_queue.put_nowait((timestamp, event_topic, str(line_read)))
+        message_queue.put_nowait((timestamp, event_topic, line_read))
         line_read = input_file.readline()
 
     mark_as_closed(filename)
@@ -157,7 +159,8 @@ def parse_events(file_path):
 
 def send_to_queue_service():
     """
-    Envia os eventos da fila de prioridades ao broker.
+    Publica no serviço de filas os eventos armazenados baseado no tempo simulado
+    de execução.
 
     :return: None
     """
@@ -178,7 +181,8 @@ def send_to_queue_service():
             event = message_queue.get_nowait()
             timestamp = event[0]
             event_topic = event[1]
-            message = event[1] + '|' + event[2]
+            # message = event[1] + '|' + event[2]
+            message = event[2]
 
             event_time = get_datetime_from(timestamp)
             time_to_next = (event_time - simulated_time).total_seconds()
@@ -191,15 +195,17 @@ def send_to_queue_service():
 
                 break
 
+            # logger.debug(
+            #     "SENT: (Topic: %s, Timestamp: %s)", event_topic[:5], timestamp)
+
             logger.debug(
-                "SENT: (Topic: %s, Timestamp: %s)", event_topic[:5], timestamp)
+                "SENT: (Topic: %s, Message: %s)", event_topic[:5], message)
 
             channel.basic_publish(
                 exchange=exchange_name, routing_key=event_topic, body=message)
 
         if (not has_open_files()) and message_queue.empty():
             break
-            # continue
 
 
 if __name__ == "__main__":
