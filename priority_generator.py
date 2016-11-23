@@ -22,11 +22,11 @@ logger.addHandler(console_handler)
 
 # Diretório completo dos dados da aplicação
 # data_path = "{1}{0}data{0}{2}"
-# data_path = "{1}{0}data_testes{0}{2}" # Arquivos de testes, contêm 10 linhas
+data_path = "{1}{0}data_testes{0}{2}" # Arquivos de testes, contêm 10 linhas
 # data_path = "{1}{0}data_testes_one_liners{0}{2}" # Arquivos com uma só linha
 # data_path = "{1}{0}data_testes_one_liners_comment_ok{0}{2}"  # comment id igual
                                                              # ao do post
-data_path = "{1}{0}data_posts{0}{2}"
+# data_path = "{1}{0}data_posts{0}{2}"
 current_dir = os.getcwd()
 
 friendships_path = data_path.format(os.sep, current_dir, "friendships.dat")
