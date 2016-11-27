@@ -23,10 +23,6 @@ logger.addHandler(console_handler)
 # Diretório completo dos dados da aplicação
 # data_path = "{1}{0}data{0}{2}"
 data_path = "{1}{0}data_testes{0}{2}" # Arquivos de testes, contêm 10 linhas
-# data_path = "{1}{0}data_testes_one_liners{0}{2}" # Arquivos com uma só linha
-# data_path = "{1}{0}data_testes_one_liners_comment_ok{0}{2}"  # comment id igual
-                                                             # ao do post
-# data_path = "{1}{0}data_posts{0}{2}"
 current_dir = os.getcwd()
 
 friendships_path = data_path.format(os.sep, current_dir, "friendships.dat")
@@ -44,7 +40,8 @@ if len(sys.argv) == 3:
 
 else:
     # time_speed_factor = 86400   # 1d/s
-    time_speed_factor = 43200   # 0.5d/s
+    # time_speed_factor = 43200   # 0.5d/s
+    time_speed_factor = 21600   # 0.25d/s
     # ip_address = '172.16.206.18'
     # ip_address = '192.168.25.7'
     # ip_address = '172.16.131.67'
@@ -55,13 +52,15 @@ credentials = pika.PlainCredentials(username='guest', password='guest')
 parameters = pika.ConnectionParameters(host=ip_address, port=5672)
 connection = pika.BlockingConnection(parameters)
 channel = connection.channel()
-exchange_name = 'amq.topic'
+exchange_name = "amq.topic"
+queue_name = "SOCIAL_NETWORK_EVENTS"
 
 # Fila das mensagens de evento
 message_queue = queue.PriorityQueue()
 
-channel.exchange_declare(
-    exchange=exchange_name, type='topic', durable=True)
+channel.exchange_declare(exchange=exchange_name, type='topic', durable=True)
+channel.queue_declare(queue=queue_name)
+channel.queue_bind(exchange=exchange_name, queue=queue_name, routing_key="#")
 
 try:
     with open(friendships_path, 'r') as friendships:
@@ -153,7 +152,10 @@ def parse_events(file_path):
 
     while line_read != '':
         timestamp = line_read.split('+')[0]
-        message_queue.put_nowait((timestamp, event_topic, line_read))
+
+        message_queue.put_nowait(
+            (timestamp, event_topic, line_read.strip('\n')))
+
         line_read = input_file.readline()
 
     mark_as_closed(filename)
@@ -191,17 +193,18 @@ def send_to_queue_service():
 
             if time_to_next > 0:
                 message_queue.put_nowait(event)
-
                 logger.debug(
                     "NO EVENT -- REMAINING EVENTS: %s", message_queue.qsize())
-
                 break
 
             logger.debug(
                 "SENT: (Topic: %s, Message: %s)", event_topic[:5], message)
 
             channel.basic_publish(
-                exchange=exchange_name, routing_key=event_topic, body=message)
+                exchange=exchange_name,
+                routing_key=event_topic,
+                body=message
+            )
 
         if (not has_open_files()) and message_queue.empty():
             break
@@ -225,7 +228,7 @@ if __name__ == "__main__":
 
         logger.info("Enviando mensagens...")
         send_to_queue_service()
-        logger.info("--MENSAGENS ENVIADAS--")
+        logger.info("Todas as mensagens foram enviadas")
 
     except KeyboardInterrupt:
         logger.info("--LEITURA INTERROMPIDA--")
